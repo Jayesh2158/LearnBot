@@ -1,0 +1,26 @@
+# Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Claude Code local overrides (keep .mcp.json checked in; ignore personal local config)
+.claude/settings.local.json
