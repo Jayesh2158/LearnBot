@@ -70,37 +70,42 @@ LearnBot is the intelligent conversational interface for **LearnSphere**, an onl
 
 ## Project Structure
 
+This repo is a **single flat project at root** — Python backend modules and the React frontend live side by side. Run every command from the repo root; there is no `cd backend` / `cd frontend`.
+
 ```
 learnbot-capstone/
 │
-├── backend/
-│   ├── .env.example          # API key template (copy to .env)
-│   ├── requirements.txt      # Python dependencies
-│   ├── config.py             # Environment configuration (Settings class)
-│   ├── prompts.py            # Part A — 3 ChatPromptTemplates with .partial()
-│   ├── guardrails.py         # Part B — Injection detector + output filter + safe invoke
-│   ├── tools_agents.py       # Part C — 4 @tool functions + 3 scoped agents
-│   ├── graph.py              # Part D — LangGraph StateGraph (6 nodes, 2 conditional edges)
-│   └── main.py               # FastAPI application with all REST endpoints
+├── .env.example              # API key template (copy to .env)
+├── requirements.txt          # Python dependencies
+├── config.py                 # Environment configuration (Settings class)
+├── prompts.py                # Part A — 3 ChatPromptTemplates with .partial()
+├── guardrails.py             # Part B — Injection detector + output filter + safe invoke
+├── tools_agents.py           # Part C — 4 @tool functions + 3 scoped agents
+├── graph.py                  # Part D — LangGraph StateGraph (6 nodes, 2 conditional edges)
+├── main.py                   # FastAPI application with all REST endpoints
 │
-├── frontend/
-│   ├── package.json          # React dependencies + proxy config
-│   ├── public/
-│   │   └── index.html        # HTML entry (DM Sans + JetBrains Mono fonts)
-│   └── src/
-│       ├── index.js           # React entry point
-│       ├── App.js             # Main component — 4-tab interface
-│       └── styles/
-│           └── App.css        # Dark-theme styling for all views
+├── package.json              # React dependencies + proxy config
+├── public/
+│   └── index.html            # HTML entry (DM Sans + JetBrains Mono fonts)
+├── src/
+│   ├── index.js              # React entry point
+│   ├── App.js                # Main component — 4-tab interface
+│   └── styles/
+│       └── App.css           # Dark-theme styling for all views
 │
-└── README.md                  # This file
+├── docs/                     # Rosetta-managed documentation (CONTEXT, ARCHITECTURE, …)
+├── agents/                   # Rosetta agent state (IMPLEMENTATION, MEMORY, …)
+├── .claude/                  # Claude Code customization (skills, agents, commands)
+├── .mcp.json                 # Rosetta MCP server registration
+├── CLAUDE.md                 # Guidance for Claude Code + Rosetta bootstrap
+└── README.md                 # This file
 ```
 
 ---
 
 ## Part A — Prompt Engineering
 
-**File:** `backend/prompts.py`
+**File:** `prompts.py`
 
 Three distinct `ChatPromptTemplate` instances are designed for LearnBot's conversation intents:
 
@@ -137,7 +142,7 @@ All three templates use `.partial(platform_name='LearnSphere', current_date=<tod
 
 ## Part B — Safe Invoke & Guardrails
 
-**File:** `backend/guardrails.py`
+**File:** `guardrails.py`
 
 ### B.1 — `education_injection_detector(text: str) -> dict`
 
@@ -179,7 +184,7 @@ Returns: `{status, response, flags, processing_time_ms}`
 
 ## Part C — Tool Design & Scoped Agents
 
-**File:** `backend/tools_agents.py`
+**File:** `tools_agents.py`
 
 ### C.1 — Four `@tool` Functions
 
@@ -209,7 +214,7 @@ Each agent is built with `create_tool_calling_agent` + `AgentExecutor` (max_iter
 
 ## Part D — LangGraph Workflow
 
-**File:** `backend/graph.py`
+**File:** `graph.py`
 
 ### D.1 — `LearnBotState` TypedDict (8 Fields)
 
@@ -286,7 +291,6 @@ The graph structure is visually rendered in the frontend's **Graph View** tab, s
 | Layer | Technology |
 |---|---|
 | **LLM Provider** | [Groq](https://console.groq.com/) — ultra-fast inference (LLaMA 3 70B) |
-| **Web Search** | [Tavily](https://tavily.com/) — AI-optimized search API |
 | **Framework** | LangChain + LangGraph for agent orchestration |
 | **Backend** | Python 3.11+ / FastAPI / Uvicorn |
 | **Frontend** | React 18 / Axios / Lucide Icons |
@@ -301,14 +305,13 @@ The graph structure is visually rendered in the frontend's **Graph View** tab, s
 - Python 3.11+
 - Node.js 18+ & npm
 - Groq API key → [https://console.groq.com/keys](https://console.groq.com/keys)
-- Tavily API key → [https://app.tavily.com/](https://app.tavily.com/)
+
+All commands below are run **from the repo root** (this is a flat project — there is no `backend/` or `frontend/` directory).
 
 ### 1. Clone & Configure Environment
 
 ```bash
-cd learnbot-capstone/backend
-
-# Create your environment file from the template
+# From the repo root: create your environment file from the template
 cp .env.example .env
 ```
 
@@ -316,14 +319,12 @@ Edit `.env` with your keys:
 
 ```env
 GROQ_API_KEY=gsk_your_groq_api_key_here
-TAVILY_API_KEY=tvly-your_tavily_api_key_here
-GROQ_MODEL=llama3-70b-8192
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
 ### 2. Install Backend Dependencies
 
 ```bash
-cd backend
 pip install -r requirements.txt
 ```
 
@@ -332,14 +333,12 @@ pip install -r requirements.txt
 - `groq` — Groq Python SDK
 - `langchain` + `langchain-groq` + `langchain-community` — LLM framework
 - `langgraph` — stateful workflow graphs
-- `tavily-python` — web search tool
 - `python-dotenv` — environment variable loading
 - `pydantic` — request/response validation
 
 ### 3. Start the Backend
 
 ```bash
-cd backend
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -348,14 +347,12 @@ The API will be available at `http://localhost:8000`. Visit `http://localhost:80
 ### 4. Install Frontend Dependencies
 
 ```bash
-cd frontend
 npm install
 ```
 
 ### 5. Start the Frontend
 
 ```bash
-cd frontend
 npm start
 ```
 

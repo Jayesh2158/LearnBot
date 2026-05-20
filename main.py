@@ -88,7 +88,6 @@ async def health_check():
         "version": "1.0.0",
         "model": settings.GROQ_MODEL,
         "groq_configured": bool(settings.GROQ_API_KEY),
-        "tavily_configured": bool(settings.TAVILY_API_KEY)
     }
 
 

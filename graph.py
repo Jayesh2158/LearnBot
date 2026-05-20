@@ -228,11 +228,28 @@ def intent_router(state: LearnBotState) -> str:
 # NODES 4-6 — Handler Nodes
 # ═════════════════════════════════════════════════════════════════
 
+# Groq + Llama 3.x intermittently fails tool calls with `tool_use_failed:
+# Failed to call a function`. Retry once on a fresh agent instance — the
+# next sample from the model usually emits a valid call.
+_GROQ_TOOL_RETRY_MARKERS = ("tool_use_failed", "Failed to call a function")
+
+
+async def _ainvoke_with_retry(agent_factory, user_input: str, attempts: int = 2):
+    last_err = None
+    for _ in range(attempts):
+        try:
+            return await agent_factory().ainvoke({"input": user_input})
+        except Exception as e:
+            last_err = e
+            if not any(m in str(e) for m in _GROQ_TOOL_RETRY_MARKERS):
+                raise
+    raise last_err
+
+
 async def course_handler(state: LearnBotState) -> dict:
     """Invoke course_agent for course-related queries."""
     try:
-        agent = get_course_agent()
-        result = await agent.ainvoke({"input": state["user_input"]})
+        result = await _ainvoke_with_retry(get_course_agent, state["user_input"])
         response = result.get("output", "I couldn't process your course query.")
         tool_calls = [
             step[0].tool for step in result.get("intermediate_steps", [])
@@ -256,8 +273,7 @@ async def course_handler(state: LearnBotState) -> dict:
 async def support_handler(state: LearnBotState) -> dict:
     """Invoke support_agent for support-related queries."""
     try:
-        agent = get_support_agent()
-        result = await agent.ainvoke({"input": state["user_input"]})
+        result = await _ainvoke_with_retry(get_support_agent, state["user_input"])
         response = result.get("output", "I couldn't process your support request.")
         tool_calls = [
             step[0].tool for step in result.get("intermediate_steps", [])
@@ -281,8 +297,7 @@ async def support_handler(state: LearnBotState) -> dict:
 async def faq_handler(state: LearnBotState) -> dict:
     """Invoke faq_agent for general FAQ queries."""
     try:
-        agent = get_faq_agent()
-        result = await agent.ainvoke({"input": state["user_input"]})
+        result = await _ainvoke_with_retry(get_faq_agent, state["user_input"])
         response = result.get("output", "I couldn't find an FAQ answer.")
         tool_calls = [
             step[0].tool for step in result.get("intermediate_steps", [])

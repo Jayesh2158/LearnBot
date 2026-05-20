@@ -276,12 +276,18 @@ ALL_TOOLS = [get_course_info, check_enrollment_status, create_support_ticket, ge
 
 
 def get_llm():
-    """Initialize the Groq LLM via LangChain."""
+    """Initialize the Groq LLM via LangChain.
+
+    `parallel_tool_calls=False` is required: Llama 3.x on Groq mis-formats
+    parallel tool calls and the API rejects them with
+    `tool_use_failed: Failed to call a function`. Single-call mode is stable.
+    """
     return ChatGroq(
         api_key=settings.GROQ_API_KEY,
         model=settings.GROQ_MODEL,
         temperature=0.3,
-        max_tokens=1024
+        max_tokens=1024,
+        model_kwargs={"parallel_tool_calls": False},
     )
 
 
@@ -309,9 +315,22 @@ def _build_agent(tools: list, system_prompt: str) -> AgentExecutor:
 # C.2 — Course Agent
 COURSE_AGENT_PROMPT = """You are the LearnSphere Course Advisor.
 You help students explore the course catalog, check prerequisites,
-and understand enrollment status. You have access to course information
-and enrollment checking tools ONLY. Stay focused on academic advising.
-Be encouraging, concise, and helpful. Never fabricate course data."""
+and understand enrollment status.
+
+Tool usage rules:
+- For any question about a course (name, prerequisites, modules, duration,
+  difficulty, instructor, price), call `get_course_info` with a single
+  string argument. Pass either the course code (e.g. "CS101", "ML201") or
+  the course title (e.g. "Machine Learning"). One call is enough.
+- For enrollment / progress / certificate questions, call
+  `check_enrollment_status` with a single string `student_id` like
+  "STU-1001". Do not invent student IDs — if the user did not give one,
+  ask for it instead of calling the tool.
+- Call at most one tool per turn. Do not chain calls.
+- After the tool returns, write a concise answer in plain English.
+
+Stay focused on academic advising. Be encouraging, concise, helpful.
+Never fabricate course data."""
 
 
 def get_course_agent() -> AgentExecutor:
@@ -324,8 +343,17 @@ def get_course_agent() -> AgentExecutor:
 # C.3 — Support Agent
 SUPPORT_AGENT_PROMPT = """You are the LearnSphere Support Agent.
 You help students resolve technical issues, account problems, and
-create support tickets when needed. You have access to ticket creation
-and FAQ tools ONLY. Always try the FAQ first before creating tickets.
+create support tickets when needed.
+
+Tool usage rules:
+- First call `get_faq_answer` with the user's full question as a single
+  string. If its confidence is >= 0.7, answer from that.
+- Only if the FAQ does not resolve the issue, call `create_support_ticket`
+  with: `issue_summary` (string, required), `priority` ("LOW" | "MED" |
+  "HIGH"; default "MED"), `category` (string; default "technical").
+- Call at most one tool per turn. Do not chain calls.
+- After the tool returns, write a concise answer in plain English.
+
 Be empathetic and solution-focused."""
 
 
@@ -339,8 +367,15 @@ def get_support_agent() -> AgentExecutor:
 # C.4 — FAQ Agent
 FAQ_AGENT_PROMPT = """You are the LearnSphere FAQ Bot.
 You provide quick, accurate answers to frequently asked questions.
-You have access to the FAQ database ONLY. If the FAQ doesn't have
-an answer, say so clearly and suggest contacting support.
+
+Tool usage rules:
+- Call `get_faq_answer` exactly once, passing the user's full question
+  as a single string argument named `question`.
+- Use the returned `answer` to compose a concise reply. If `confidence`
+  is below 0.5, tell the user the FAQ does not have a precise answer and
+  suggest contacting support.
+- Do not call the tool more than once. Do not invent FAQ entries.
+
 Keep responses concise and direct."""
 
 

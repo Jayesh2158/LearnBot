@@ -24,3 +24,8 @@ yarn-error.log*
 
 # Claude Code local overrides (keep .mcp.json checked in; ignore personal local config)
 .claude/settings.local.json
+
+# Rosetta
+agents/TEMP/
+refsrc/
+!refsrc/INDEX.md
